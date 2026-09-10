@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block title %}学习工作台{% endblock %}
+{% block content %}
+<div style="text-align:center; padding:36px 0 12px" data-page-node-id="Ho6xWvPxaRKfXZO11DmYFd">
+  <div style="font-size:56px; line-height:1" data-page-node-id="dS9KStRsuUsG7bq9OcgRYu">🎓</div>
+  <h1 style="font-size:34px; margin:14px 0 6px" data-page-node-id="HfI2ZwdRs6wzxwaylzkEmI">学习工作台</h1>
+  <p class="sub" style="font-size:16px; max-width:560px; margin:0 auto" data-page-node-id="SIvgwF70WtCYhVsrnAoagf">
+    输入你想学的方向，AI 帮你排学习路线、找课程、配练习、做规划。
+    就像有个学长陪你把「想学」变成「真学会了」。
+  </p>
+  <div style="margin:26px auto 8px; display:flex; gap:14px; justify-content:center; flex-wrap:wrap" data-page-node-id="wKJixJiYR2uYohRYlGntgu">
+    <a class="btn" href="{{ url_for('roadmap') }}" style="font-size:16px; padding:12px 26px" data-page-node-id="EmjkDUmVEhlCGAAYNMCl6x">🗺️ 免登录 · 生成学习路线</a>
+    <a class="btn ghost" href="{{ url_for('register') }}" style="font-size:16px; padding:12px 26px" data-page-node-id="87azkcCyucyYa0yDTpOUhP">注册一个账号</a>
+  </div>
+  <p style="color:var(--muted); font-size:13px; margin-top:10px" data-page-node-id="Agyl6uk2xYwcBcMPe4AArC">已有账号？<a href="{{ url_for('login') }}" data-page-node-id="vjhTSS3yBln9xQgDpdH9UF">直接登录</a></p>
+</div>
+
+<div class="grid" style="margin-top:26px" data-page-node-id="iT1OAy8z5kyAYBgygJcMBW">
+  <div class="card" data-page-node-id="mG5X6c36sYCb6CSVJmAl1C">
+    <div class="num" data-page-node-id="FiPKDwDlntrSHrFGktAzRG">🗺️</div>
+    <h3 data-page-node-id="wmEcM22fe7m0lo6mGeRWru">学习路线</h3>
+    <p data-page-node-id="ITP2aBZ3uAo3v1cA97PfDB">说一个方向（机器学习、Python 后端、考研数学…），AI 生成分阶段路线、推荐课程与教材、过关标准、动手项目和节奏建议。</p>
+  </div>
+  <div class="card" data-page-node-id="C6PAqosowy8DfSuxtZ8GLV">
+    <div class="num" data-page-node-id="sBQ5x4xIYZDT3elYv9BjKv">💬</div>
+    <h3 data-page-node-id="UeckEpedn6OADuHHwExtej">问 AI</h3>
+    <p data-page-node-id="lUor3rppzpc8NquEkmEe6i">概念不懂？报错看不懂？像问同学一样问它，用费曼学习法把知识讲透，还给能立刻动手的小例子。</p>
+  </div>
+  <div class="card" data-page-node-id="rPQDxK3L60aSmSrSO0oZ66">
+    <div class="num" data-page-node-id="mK6LunFICKwgimBN5jooVa">✏️</div>
+    <h3 data-page-node-id="B2FP0L6aEQV00VA15UUHQG">练习 + 批改</h3>
+    <p data-page-node-id="xAFbCeuT40iy1TXaE6B2eB">围绕知识点自动出题，写完 AI 逐题批改、指出错因、给出正确思路，真正检验学没学懂。</p>
+  </div>
+  <div class="card" data-page-node-id="vsSHKo9N0eRKiSJo0pebBv">
+    <div class="num" data-page-node-id="7GzFj8vCTRwka4gNpTxgUT">🧭</div>
+    <h3 data-page-node-id="QHpeP2Rv17gZ5qYFUEX7tx">拓展与找资源</h3>
+    <p data-page-node-id="jGlqLqHi8GzTt7C3qwCZ9H">学完一块自动延展进阶方向、相关领域与真实应用，还能帮你找相关论文与资源。</p>
+  </div>
+  <div class="card" data-page-node-id="YN32uW18Rr5eEU1dwWT6Xz">
+    <div class="num" data-page-node-id="DKYdd3YLebpdgs915COwll">🔍</div>
+    <h3 data-page-node-id="MHhfytAY6qU1EDnhelB0tz">多源搜索</h3>
+    <p data-page-node-id="hchGdPiU8cLJP1TYIeaHX7">全网 + B 站视频一站搜，找演示动画、长视频课、习题讲解，兴趣入门快人一步。</p>
+  </div>
+  <div class="card" data-page-node-id="ZboDfBA1VnqYYCgl8K67Hq">
+    <div class="num" data-page-node-id="blfVZPDyTYAKEk2eJz6VMR">🧩</div>
+    <h3 data-page-node-id="QG13ZjJaDhtA07MKKmmc3H">学习地图 / 知识图谱</h3>
+    <p data-page-node-id="Tw3TO3yxyEc4srXJDyhD4B">输入方向生成可视化知识地图，看清"先学什么、再学什么"；注册后还能用你的笔记连成专属学习图谱。</p>
+  </div>
+  <div class="card" data-page-node-id="kfv4w3xeugnSXDsYtBzeem">
+    <div class="num" data-page-node-id="Dc3yY0X79F25CbKemZ7Qh6">📝</div>
+    <h3 data-page-node-id="QC0r4kjvNM5Z73NpJ9wQfy">笔记与成长档案</h3>
+    <p data-page-node-id="WIanB4yqtVGwtPTfXD2eQs">注册后拥有独立笔记库，可把每张路线图/练习存成笔记，记录掌握程度，攒自己的知识库与成就。</p>
+  </div>
+</div>
+
+<p style="margin-top:30px; color:var(--muted); font-size:13px; text-align:center" data-page-node-id="l37LCgl3U6hmfKZ0EQFfeN">
+  提示：核心功能免登录即可体验；注册后数据独立保存，AI 结果更个性化。
+</p>
+{% endblock %}

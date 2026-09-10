@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}搜索{% endblock %}
+{% block content %}
+<h1 data-page-node-id="eNfWwFF4zDoQnKJP4FcDFo">搜索</h1>
+<p class="sub" data-page-node-id="KQd7KgCJvIVEKLYvMaRrUP">一个框，同时搜全网 + 本地笔记 + LLM Wiki + B站视频</p>
+<form class="searchbox" action="{{ url_for('search') }}" method="get" data-page-node-id="gX2hOXzl5EZOofBQGC8GYE">
+  <input type="search" name="q" value="{{ q }}" placeholder="搜概念、搜报错、搜课程视频……" data-page-node-id="jxLHZSkYpgslFI1gBePC3e">
+  <button class="btn" type="submit" data-page-node-id="9lIOaAvvZeVxrkj0eAmfKF">搜索</button>
+</form>
+
+{% if searched %}
+  <div class="result-section" data-page-node-id="wvXDQdY5tLM7AL3NtadGpI">
+    <h2 data-page-node-id="qqNwbrCFlENPoxI7UYHMuE">本地笔记（{{ local|length }}）</h2>
+    {% if local %}
+      {% for r in local %}
+      <div class="result-item" data-page-node-id="zPpwTCKsBBmG6Mj2oVtAsH">
+        <a href="{{ url_for('note_view', filename=r.filename) }}" data-page-node-id="mPYenCElzMMXufnfe0L2n8">{{ r.title }}</a>
+        <div class="snippet" data-page-node-id="mN3cuSmgS5JmvNcNFeijXz">{{ r.snippet }}</div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <p style="color:var(--muted)" data-page-node-id="H1olVxb6fFN4L01jE9nOEk">本地笔记里没找到相关内容。</p>
+    {% endif %}
+  </div>
+
+  <div class="result-section" data-page-node-id="0F54ppIgf6766bXzntBsrT">
+    <h2 data-page-node-id="cPQ4iRp82OCR29pBGGTjHs">LLM Wiki（{{ wiki|length }}）</h2>
+    {% if wiki %}
+      {% for r in wiki %}
+      <div class="result-item" data-page-node-id="GZteqIh7U1EiDpV73d5REf">
+        <a href="{{ url_for('wiki_view', relpath=r.relpath) }}" data-page-node-id="03rhRnAip6QjvgvV2LoPGp">{{ r.title }}</a>
+        <div class="snippet" data-page-node-id="N8juRdMA5VV6zzr9xArglT">{{ r.snippet }}</div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <p style="color:var(--muted)" data-page-node-id="7vstMOf2DIQrb5k0LBaHW9">
+        {% if wiki_msg %}{{ wiki_msg }}{% else %}LLM Wiki 里没找到相关内容。{% endif %}
+      </p>
+    {% endif %}
+  </div>
+
+  <div class="result-section" data-page-node-id="hiArzqbEOReXkGKMS4NMpL">
+    <h2 data-page-node-id="Vi2qgNt2Mdmi41NKMQUki5">B站视频（{{ videos|length }}）</h2>
+    {% if videos %}
+      {% for v in videos %}
+      <div class="result-item" data-page-node-id="N6MTAljgZKnAq5rnzOnZVb">
+        <a href="{{ v.url }}" target="_blank" rel="noopener" data-page-node-id="z44moWyivubYK3QbTZTICB">{{ v.title }}</a>
+        <div class="snippet" data-page-node-id="QXRrrgMGzGZMBSV0TH1ySK">UP：{{ v.author }} · 播放 {% if v.play >= 10000 %}{{ '%.1f'|format(v.play / 10000) }}万{% else %}{{ v.play }}{% endif %} · 时长 {{ v.duration }}</div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <p style="color:var(--muted)" data-page-node-id="jL2mfff0WfXYiJ9nUtAEiB">没搜到 B站视频（可能网络或风控，稍后重试）。</p>
+    {% endif %}
+  </div>
+
+  <div class="result-section" data-page-node-id="nj2y1Fcz9J5ALzLvzO7DZB">
+    <h2 data-page-node-id="M409nQofFCZGeyvVeJPb7g">全网搜索（{{ web|length }}）</h2>
+    {% if web %}
+      <button class="btn ghost" id="summarize-btn" data-query="{{ q }}" data-results='{{ web | tojson }}' data-page-node-id="2Al7y3iym4rhIX69zTwHC3">🤖 让 AI 总结这些结果</button>
+      <div id="ai-summary" class="ai-summary" style="display:none" data-page-node-id="sBtHdYf5qmsWAegModtpXU"></div>
+      {% for r in web %}
+      <div class="result-item" style="margin-top:10px" data-page-node-id="1KOmQscYA6aAozjAFm9Ujn">
+        <a href="{{ r.href }}" target="_blank" rel="noopener" data-page-node-id="VR6f89aPlXSHY1K3CEte5B">{{ r.title }}</a>
+        <div class="snippet" data-page-node-id="2xkRMmxXhj4EvU6mnf8p5s">{{ r.body }}</div>
+      </div>
+      {% endfor %}
+    {% else %}
+      <p style="color:var(--muted)" data-page-node-id="ctsalstZs1mejGFBzHZkKN">
+        {% if web_msg %}{{ web_msg }}{% else %}全网搜索没返回结果（可能网络问题或搜索库限流）。本地搜索、LLM Wiki 和 B站视频仍然可用。{% endif %}
+      </p>
+    {% endif %}
+  </div>
+{% endif %}
+{% endblock %}

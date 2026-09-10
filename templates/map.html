@@ -1,0 +1,398 @@
+{% extends "base.html" %}
+{% block title %}学习地图{% endblock %}
+{% set cur = session.get('username') %}
+{% block content %}
+<h1>🧩 学习地图 · 知识图谱</h1>
+<p class="sub">把零散的知识点连成一张看得见的图：先学什么、再学什么、学到哪一步，一目了然。</p>
+
+<div style="display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap">
+  <button class="chip active" id="tab-theme">🌐 按主题生成</button>
+  <button class="chip" id="tab-notes" {% if not cur %}title="登录后可用你的笔记生成"{% endif %}>📚 我的笔记图谱{% if not cur %}（需登录）{% endif %}</button>
+</div>
+
+<div id="theme-box">
+  <div style="margin-bottom:10px">
+    {% for d in ["自然语言处理", "机器学习", "深度学习", "Python 编程", "大模型应用", "算法与数据结构"] %}
+    <button class="chip" data-topic="{{ d }}">{{ d }}</button>
+    {% endfor %}
+  </div>
+  <form id="map-form" class="searchbox">
+    <input type="text" id="map-topic" value="{{ request.args.get('d', '') }}" placeholder="输入想学的方向，例如：自然语言处理 / 机器学习…">
+    <button class="btn" type="submit">生成知识地图</button>
+  </form>
+</div>
+
+<div id="notes-box" style="display:none">
+  {% if cur %}
+  <p style="color:var(--muted); font-size:14px">读取你全部笔记的标题 / 分类 / 标签 / 掌握程度，自动连成一张"我的学习地图"。节点颜色=掌握状态，点击节点可打开笔记。</p>
+  <button class="btn" id="notes-gen">📚 生成我的笔记图谱</button>
+  {% else %}
+  <div class="notice">「我的笔记图谱」需要登录后使用（要读取你自己的笔记数据）。<a href="{{ url_for('login') }}">去登录</a> / <a href="{{ url_for('register') }}">注册</a></div>
+  {% endif %}
+</div>
+
+<div id="map-status" style="display:none; margin-top:16px; color:var(--muted)"></div>
+
+<div id="map-result" style="display:none; margin-top:16px">
+  <div class="markdown" style="padding:0; overflow:hidden">
+    <div style="display:flex; align-items:center; gap:10px; padding:12px 18px; border-bottom:1px solid var(--border); flex-wrap:wrap">
+      <strong id="map-title">知识地图</strong>
+      <span class="tag" id="map-demo-tag" style="display:none">演示模式示例</span>
+      <span style="color:var(--muted); font-size:13px" id="map-stats"></span>
+      <span style="flex:1"></span>
+      <button class="btn ghost" id="map-zoom-in" style="padding:5px 12px; font-size:13px">＋</button>
+      <button class="btn ghost" id="map-zoom-out" style="padding:5px 12px; font-size:13px">－</button>
+      <button class="btn ghost" id="map-reset" style="padding:5px 12px; font-size:13px">复位</button>
+      <button class="btn" id="map-save" style="padding:6px 14px; font-size:13px">保存为笔记</button>
+    </div>
+    <div style="display:grid; grid-template-columns: 1fr 300px; gap:0">
+      <div style="min-height:540px; position:relative; background:
+          radial-gradient(circle at 1px 1px, #e8e6df 1px, transparent 0) 0 0/18px 18px, #fbfaf7">
+        <div id="map-svg-wrap" style="width:100%; height:540px"></div>
+        <div id="map-legend" style="position:absolute; left:12px; top:10px; background:rgba(255,255,255,.92); border:1px solid var(--border); border-radius:10px; padding:8px 12px; font-size:12px; line-height:1.9; box-shadow:0 1px 4px rgba(0,0,0,.05)"></div>
+        <div style="position:absolute; right:12px; bottom:8px; font-size:11px; color:var(--muted)">💡 可拖拽节点 · 箭头=依赖方向</div>
+      </div>
+      <div id="map-list" style="border-left:1px solid var(--border); padding:14px 16px; max-height:540px; overflow-y:auto; font-size:13px"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  // ---------- 模式切换 ----------
+  var logged = {{ 'true' if cur else 'false' }};
+  var tabTheme = document.getElementById("tab-theme");
+  var tabNotes = document.getElementById("tab-notes");
+  var themeBox = document.getElementById("theme-box");
+  var notesBox = document.getElementById("notes-box");
+  var mode = "theme";
+  function switchMode(m) {
+    mode = m;
+    tabTheme.classList.toggle("active", m === "theme");
+    tabNotes.classList.toggle("active", m === "notes");
+    themeBox.style.display = m === "theme" ? "block" : "none";
+    notesBox.style.display = m === "notes" ? "block" : "none";
+  }
+  tabTheme.addEventListener("click", function () { switchMode("theme"); });
+  tabNotes.addEventListener("click", function () {
+    if (!logged) { alert("「我的笔记图谱」需要登录后使用"); return; }
+    switchMode("notes");
+  });
+
+  var statusBox = document.getElementById("map-status");
+  var resultBox = document.getElementById("map-result");
+  var lastGraph = null, lastText = "", lastSource = "theme";
+
+  document.querySelectorAll("#theme-box .chip[data-topic]").forEach(function (c) {
+    c.addEventListener("click", function () {
+      document.getElementById("map-topic").value = c.dataset.topic;
+      generate("theme", c.dataset.topic);
+    });
+  });
+  document.getElementById("map-form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var t = document.getElementById("map-topic").value.trim();
+    if (t) generate("theme", t);
+  });
+  var notesGen = document.getElementById("notes-gen");
+  if (notesGen) notesGen.addEventListener("click", function () { generate("notes", ""); });
+
+  function generate(src, topic) {
+    resultBox.style.display = "none";
+    statusBox.style.display = "block";
+    statusBox.textContent = src === "theme"
+      ? "正在后台绘制" + topic + " 的知识地图…（通常十几秒，可先做别的）"
+      : "正在读取你的笔记并连线…（通常十几秒，可先做别的）";
+    submitAndPoll("/api/map", { source: src, topic: topic }, function (res) {
+      statusBox.style.display = "none";
+      var r = res.result;
+      if (!r || !r.graph) { statusBox.style.display = "block"; statusBox.textContent = (r && r.message) || res.message || "（生成失败）"; return; }
+      lastGraph = r.graph; lastText = r.text || ""; lastSource = r.source || "theme";
+      var g = lastGraph;
+      document.getElementById("map-title").textContent = (r.source === "notes" ? "我的笔记图谱" : g.topic + " · 学习地图");
+      var demoTag = document.getElementById("map-demo-tag");
+      demoTag.style.display = r.demo ? "inline-block" : "none";
+      if (r.demo && r.source === "theme") demoTag.textContent = "演示模式示例（配 Key 后生成专属地图）";
+      if (r.demo && r.source === "notes") demoTag.textContent = "本地规则版（配 Key 后 AI 分析真实依赖）";
+      document.getElementById("map-stats").textContent = g.nodes.length + " 个知识点 · " + g.edges.length + " 条依赖";
+      buildLegend(g);
+      renderGraph(g);
+      buildList(g);
+      resultBox.style.display = "block";
+    });
+  }
+
+  // ---------- 图例 ----------
+  var THEME_STAGE = ["入门", "基础", "进阶", "深入", "实战"];
+  var COLOR_STAGE = ["#94a3b8", "#38bdf8", "#4f46e5", "#9333ea", "#0d9488"];
+  var COLOR_LEVEL = ["#94a3b8", "#f59e0b", "#22a06b"]; // 未掌握/学习中/已掌握
+  var LEVEL_NAME = ["未掌握", "学习中", "已掌握"];
+  function buildLegend(g) {
+    var box = document.getElementById("map-legend");
+    if (g.nodes.length && g.nodes[0].hasOwnProperty("level")) {
+      box.innerHTML = "<b>掌握程度</b><br>" + LEVEL_NAME.map(function (n, i) {
+        return '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + COLOR_LEVEL[i] + ';margin-right:5px"></span>' + n;
+      }).join("<br>");
+    } else {
+      box.innerHTML = "<b>学习阶段</b><br>" + THEME_STAGE.map(function (n, i) {
+        return '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + COLOR_STAGE[i] + ';margin-right:5px"></span>' + n;
+      }).join("<br>");
+    }
+  }
+
+  // ---------- 图谱渲染（力导向 + 分层初始化） ----------
+  var svgWrap, svg, zoomK = 1;
+  function renderGraph(g) {
+    svgWrap = document.getElementById("map-svg-wrap");
+    svgWrap.innerHTML = "";
+    var W = 880, H = 540, nodes = g.nodes, edges = g.edges;
+    var nodeMap = {};
+    nodes.forEach(function (n) {
+      var isNotes = n.hasOwnProperty("level");
+      var key = isNotes ? n.level : n.stage;
+      n._col = isNotes ? key - 1 : key - 1; // 0..4
+      nodeMap[n.id] = n;
+    });
+    var maxCol = 1;
+    nodes.forEach(function (n) { if (n._col > maxCol) maxCol = n._col; });
+    // 分层初始化：按阶段(level/stage)分列，列内按顺序上下排布
+    var perCol = {};
+    nodes.forEach(function (n) { (perCol[n._col] = perCol[n._col] || []).push(n); });
+    Object.keys(perCol).forEach(function (c) {
+      var arr = perCol[c], k = arr.length;
+      arr.forEach(function (n, i) {
+        var colW = (W - 140) / (maxCol + 1);
+        n.x = 90 + n._col * colW + (Math.random() - 0.5) * 30;
+        n.y = (H / 2) + (i - (k - 1) / 2) * Math.min(74, H / (k + 1)) + (Math.random() - 0.5) * 16;
+      });
+    });
+    // 简单力导向收敛
+    for (var iter = 0; iter < 260; iter++) {
+      var cooling = 1 - iter / 300;
+      nodes.forEach(function (a) {
+        a.vx = a.vx || 0; a.vy = a.vy || 0;
+        nodes.forEach(function (b) {
+          if (a === b) return;
+          var dx = a.x - b.x, dy = a.y - b.y;
+          var d2 = dx * dx + dy * dy || 1;
+          var d = Math.sqrt(d2);
+          if (d < 200) {
+            var f = (90000 / d2) * 0.06 * cooling;
+            a.vx += (dx / d) * f; a.vy += (dy / d) * f;
+          }
+        });
+        a.vx += (W / 2 - a.x) * 0.002 * cooling;
+        a.vy += (H / 2 - a.y) * 0.002 * cooling;
+      });
+      edges.forEach(function (e) {
+        var a = nodeMap[e.from], b = nodeMap[e.to];
+        if (!a || !b) return;
+        var dx = b.x - a.x, dy = b.y - a.y;
+        var d = Math.sqrt(dx * dx + dy * dy) || 1;
+        var len = a.hasOwnProperty("level") ? 150 : 130;
+        var f = (d - len) * 0.012 * cooling;
+        var ux = dx / d, uy = dy / d;
+        a.vx += ux * f; a.vy += uy * f;
+        b.vx -= ux * f; b.vy -= uy * f;
+      });
+      nodes.forEach(function (n) {
+        n.x += Math.max(-6, Math.min(6, n.vx)); n.y += Math.max(-6, Math.min(6, n.vy));
+        n.vx = 0; n.vy = 0;
+      });
+    }
+    // 适配到画布
+    var minX = 1e9, minY = 1e9, maxX = -1e9, maxY = -1e9;
+    nodes.forEach(function (n) {
+      minX = Math.min(minX, n.x); maxX = Math.max(maxX, n.x);
+      minY = Math.min(minY, n.y); maxY = Math.max(maxY, n.y);
+    });
+    var pad = 70;
+    minX -= pad; maxX += pad; minY -= pad; maxY += pad;
+    var vw = Math.max(40, maxX - minX), vh = Math.max(40, maxY - minY);
+    zoomK = 1;
+    svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", minX + " " + minY + " " + vw + " " + vh);
+    svg.setAttribute("preserveAspectRatio", "xMidYMid meet");
+    svg.style.width = "100%"; svg.style.height = "100%";
+    svg.style.display = "block";
+
+    var defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+    var marker = document.createElementNS("http://www.w3.org/2000/svg", "marker");
+    marker.setAttribute("id", "arrowhead");
+    marker.setAttribute("markerWidth", "8"); marker.setAttribute("markerHeight", "8");
+    marker.setAttribute("refX", "7"); marker.setAttribute("refY", "3");
+    marker.setAttribute("orient", "auto");
+    marker.setAttribute("markerUnits", "strokeWidth");
+    marker.innerHTML = '<path d="M0,0 L0,6 L8,3 z" fill="#b9b2a5"></path>';
+    defs.appendChild(marker);
+    svg.appendChild(defs);
+
+    // 画边
+    edges.forEach(function (e) {
+      var a = nodeMap[e.from], b = nodeMap[e.to];
+      if (!a || !b) return;
+      var line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      var mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+      var dx = b.x - a.x, dy = b.y - a.y, d = Math.sqrt(dx * dx + dy * dy) || 1;
+      var ux = dx / d, uy = dy / d, r = 24;
+      line.setAttribute("x1", a.x + ux * r); line.setAttribute("y1", a.y + uy * r);
+      line.setAttribute("x2", b.x - ux * r); line.setAttribute("y2", b.y - uy * r);
+      line.setAttribute("stroke", "#cfc9bc"); line.setAttribute("stroke-width", "1.6");
+      line.setAttribute("marker-end", "url(#arrowhead)");
+      var title = document.createElementNS("http://www.w3.org/2000/svg", "title");
+      title.textContent = a.label + " → " + b.label + "（" + (e.label || "前置") + "）";
+      line.appendChild(title);
+      svg.appendChild(line);
+      var t = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      t.setAttribute("x", mx); t.setAttribute("y", my - 6);
+      t.setAttribute("text-anchor", "middle"); t.setAttribute("font-size", "10");
+      t.setAttribute("fill", "#a09888");
+      t.textContent = e.label || "";
+      svg.appendChild(t);
+    });
+
+    // 画节点
+    var dragState = null, moved = false;
+    nodes.forEach(function (n) {
+      var gEl = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      gEl.setAttribute("class", "map-node");
+      var isNotes = n.hasOwnProperty("level");
+      var color = isNotes ? COLOR_LEVEL[(n.level || 1) - 1] : COLOR_STAGE[(n.stage || 1) - 1];
+      var r = 25;
+      var circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      circle.setAttribute("r", r); circle.setAttribute("fill", color);
+      circle.setAttribute("stroke", "#fff"); circle.setAttribute("stroke-width", "2");
+      circle.setAttribute("style", "cursor:pointer");
+      var label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      var words = n.label.split("");
+      var lines = [];
+      if (words.length <= 6) lines.push(n.label);
+      else {
+        var mid = Math.ceil(words.length / 2);
+        lines.push(words.slice(0, mid).join(""), words.slice(mid).join(""));
+      }
+      lines.forEach(function (ln, i) {
+        var tp = document.createElementNS("http://www.w3.org/2000/svg", "tspan");
+        tp.setAttribute("x", 0); tp.setAttribute("y", (i - (lines.length - 1) / 2) * 13 + 4);
+        tp.textContent = ln;
+        label.appendChild(tp);
+      });
+      label.setAttribute("text-anchor", "middle");
+      label.setAttribute("fill", "#fff"); label.setAttribute("font-size", "12"); label.setAttribute("font-weight", "600");
+      label.setAttribute("style", "pointer-events:none");
+      var meta = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      var metaText = isNotes ? n.category || "" : THEME_STAGE[(n.stage || 1) - 1];
+      meta.setAttribute("y", r + 14); meta.setAttribute("text-anchor", "middle");
+      meta.setAttribute("font-size", "11"); meta.setAttribute("fill", "#8a8272");
+      meta.textContent = metaText;
+      meta.setAttribute("style", "pointer-events:none");
+      gEl.appendChild(circle); gEl.appendChild(label); gEl.appendChild(meta);
+      gEl.setAttribute("transform", "translate(" + n.x + "," + n.y + ")");
+      // 拖拽
+      gEl.addEventListener("pointerdown", function (ev) {
+        dragState = { node: n, sx: ev.clientX, sy: ev.clientY, ox: n.x, oy: n.y };
+        moved = false;
+        gEl.setPointerCapture(ev.pointerId);
+      });
+      gEl.addEventListener("pointermove", function (ev) {
+        if (!dragState || dragState.node !== n) return;
+        if (Math.abs(ev.clientX - dragState.sx) + Math.abs(ev.clientY - dragState.sy) > 4) moved = true;
+        if (moved) {
+          var ct = svg.getBoundingClientRect();
+          var scaleX = vw / ct.width, scaleY = vh / ct.height;
+          n.x = dragState.ox + (ev.clientX - dragState.sx) * scaleX;
+          n.y = dragState.oy + (ev.clientY - dragState.sy) * scaleY;
+          n.x = Math.max(minX + pad, Math.min(maxX - pad, n.x));
+          n.y = Math.max(minY + pad, Math.min(maxY - pad, n.y));
+          gEl.setAttribute("transform", "translate(" + n.x + "," + n.y + ")");
+          repositionEdges();
+        }
+      });
+      gEl.addEventListener("pointerup", function () {
+        if (!moved && isNotes && n.filename) {
+          window.open("/notes/" + encodeURIComponent(n.filename), "_blank");
+        }
+        dragState = null;
+      });
+      svg.appendChild(gEl);
+    });
+    function repositionEdges() {
+      var i = 0;
+      edges.forEach(function (e) {
+        var a = nodeMap[e.from], b = nodeMap[e.to];
+        if (!a || !b) return;
+        var line = svg.querySelectorAll("line")[i];
+        var txt = svg.querySelectorAll("text")[i];
+        i++;
+        var dx = b.x - a.x, dy = b.y - a.y, d = Math.sqrt(dx * dx + dy * dy) || 1;
+        var ux = dx / d, uy = dy / d, r = 25;
+        line.setAttribute("x1", a.x + ux * r); line.setAttribute("y1", a.y + uy * r);
+        line.setAttribute("x2", b.x - ux * r); line.setAttribute("y2", b.y - uy * r);
+        txt.setAttribute("x", (a.x + b.x) / 2); txt.setAttribute("y", (a.y + b.y) / 2 - 6);
+      });
+    }
+    // 缩放
+    document.getElementById("map-zoom-in").onclick = function () { zoom(1.15); };
+    document.getElementById("map-zoom-out").onclick = function () { zoom(0.87); };
+    document.getElementById("map-reset").onclick = function () { zoomK = 1; svg.style.transform = ""; };
+    function zoom(k) {
+      zoomK = Math.min(2.2, Math.max(0.4, zoomK * k));
+      svg.style.transform = "scale(" + zoomK + ")";
+      svg.style.transformOrigin = "center";
+    }
+    svgWrap.appendChild(svg);
+  }
+
+  // ---------- 右侧清单 ----------
+  function buildList(g) {
+    var box = document.getElementById("map-list");
+    var isNotes = g.nodes.length && g.nodes[0].hasOwnProperty("level");
+    var html = "<b style='font-size:14px'>📋 清单与连线</b><br><br>";
+    if (isNotes) {
+      html += g.nodes.map(function (n) {
+        var dot = '<span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:' + COLOR_LEVEL[(n.level || 1) - 1] + ';margin-right:6px"></span>';
+        var extra = n.category ? '<span style="color:var(--accent)">' + esc(n.category) + "</span> " : "";
+        var tags = (n.tags || []).map(function (t) { return "<span class='tag'>" + esc(t) + "</span>"; }).join("");
+        var link = n.filename ? ' <a href="/notes/' + encodeURIComponent(n.filename) + '" style="font-size:12px">打开笔记 →</a>' : "";
+        return '<div style="margin-bottom:10px">' + dot + "<b>" + esc(n.label) + "</b>" + link + "<br><div style='margin:2px 0 0 16px; font-size:12px; color:var(--muted)'>" + extra + tags + LEVEL_NAME[(n.level || 1) - 1] + "</div></div>";
+      }).join("");
+    } else {
+      [1, 2, 3, 4, 5].forEach(function (st) {
+        var items = g.nodes.filter(function (n) { return (n.stage || 1) === st; });
+        if (!items.length) return;
+        html += "<b style='color:" + COLOR_STAGE[st - 1] + "'>" + THEME_STAGE[st - 1] + "</b><br>";
+        items.forEach(function (n) {
+          html += '· <span style="margin:0 0 4px 0; display:inline-block">' + esc(n.label) + "</span><br>";
+        });
+        html += "<br>";
+      });
+    }
+    if (g.edges.length) {
+      var map = {};
+      g.nodes.forEach(function (n) { map[n.id] = n.label; });
+      html += "<br><b>🔗 依赖关系</b><br>";
+      html += g.edges.map(function (e) {
+        return "· " + esc(map[e.from] || e.from) + " <span style='color:#a09888'>→</span> " + esc(map[e.to] || e.to) + "（" + esc(e.label || "前置") + "）";
+      }).join("<br>");
+    } else {
+      html += "<br><span style='color:var(--muted)'>（暂无明确依赖，先跟着清单逐个学）</span>";
+    }
+    box.innerHTML = html;
+  }
+
+  // ---------- 保存为笔记 ----------
+  document.getElementById("map-save").addEventListener("click", async function () {
+    if (!lastGraph) return;
+    var title = lastSource === "notes" ? "我的笔记图谱" : (lastGraph.topic || "学习地图") + " 学习地图";
+    var r = await postJSON("/api/roadmap/save", { title: title, content: lastText });
+    await guardSave(r);
+  });
+
+  // 从首页带 ?d= 直接生成
+  var auto = document.getElementById("map-topic").value.trim();
+  if (auto && mode === "theme") { document.getElementById("map-form").requestSubmit(); }
+})();
+</script>
+{% endblock %}

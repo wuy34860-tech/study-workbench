@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% if mode == 'register' %}注册{% else %}登录{% endif %} - 学习工作台</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body style="display:flex; align-items:center; justify-content:center; min-height:100vh; background:var(--bg)">
+  <div class="card" style="width:360px; padding:32px">
+    <div style="text-align:center; margin-bottom:20px">
+      <div style="font-size:40px">🎓</div>
+      <h1 style="font-size:22px; margin:8px 0 4px">学习工作台</h1>
+      <p style="color:var(--muted); margin:0">{% if mode == 'register' %}注册一个新账号{% else %}登录你的账号{% endif %}</p>
+    </div>
+    {% if error %}<div class="notice">{{ error }}</div>{% endif %}
+    <form method="post">
+      <label>用户名</label>
+      <input type="text" name="username" required autofocus style="margin-bottom:14px">
+      <label>密码</label>
+      <input type="password" name="password" required style="margin-bottom:20px">
+      <button class="btn" type="submit" style="width:100%">{% if mode == 'register' %}注册{% else %}登录{% endif %}</button>
+    </form>
+    <div style="text-align:center; margin-top:16px; font-size:14px; color:var(--muted)">
+      {% if mode == 'register' %}
+      已有账号？<a href="{{ url_for('login') }}">去登录</a>
+      {% else %}
+      没有账号？<a href="{{ url_for('register') }}">注册一个</a>
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>

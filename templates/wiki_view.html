@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px">
+  <a href="{{ url_for('search') }}">← 返回搜索</a>
+  <div style="display:flex; gap:8px; align-items:center">
+    <span class="cat">📚 LLM Wiki</span>
+    <button class="btn ghost" id="to-note-btn" data-relpath="{{ relpath }}">📥 存为工作台笔记</button>
+  </div>
+</div>
+<div class="markdown">{{ html | safe }}</div>
+{% endblock %}

@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}笔记{% endblock %}
+{% block content %}
+<h1>我的笔记</h1>
+<p class="sub">知识卡片库 · 存成 Markdown，和 Obsidian / VS Code 通用</p>
+
+<div style="display:flex; gap:10px; flex-wrap:wrap; margin-bottom:20px">
+  <a class="btn" href="{{ url_for('note_new') }}">+ 新建笔记</a>
+  <a class="btn ghost" href="{{ url_for('notes_upload') }}">上传笔记</a>
+  <a class="btn ghost" href="{{ url_for('notes_import') }}">丢书检索</a>
+  <button class="btn ghost" id="organize-btn">🤖 一键整理</button>
+</div>
+<div id="organize-result" class="answer-box" style="display:none"></div>
+
+{% if notes %}
+<ul class="notes-list" style="margin-top:16px">
+  {% for n in notes %}
+  <li class="note-item">
+    <a href="{{ url_for('note_view', filename=n.filename) }}">{{ n.title }}</a>
+    {% if n.category %}<span class="cat">〔{{ n.category }}〕</span>{% endif %}
+    {% for t in n.tags %}<span class="tag">{{ t }}</span>{% endfor %}
+    <div class="meta">{{ n.mtime }}</div>
+    <div class="preview">{{ n.preview }}</div>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p style="color:var(--muted); margin-top:20px">还没有笔记。可以点「新建笔记」「上传笔记」，或「丢书检索」把一本书提炼成知识卡片。</p>
+{% endif %}
+{% endblock %}

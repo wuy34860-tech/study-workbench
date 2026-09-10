@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh" data-page-node-id="FOC4KwtLSAIDjxfUT8Q3Ex">
+<head data-page-node-id="on0SSacIEzPpmS0GnW3KK7">
+  <meta charset="utf-8" data-page-node-id="9rk9U0tmEiVqaHIxoWoSwZ">
+  <meta name="viewport" content="width=device-width, initial-scale=1" data-page-node-id="Avbf4Fkdl4GBTUZQSSnlqd">
+  <title>{% block title %}学习工作台{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" data-page-node-id="QoHc7vaHQfTtEMjWrUECwF">
+</head>
+<body data-page-node-id="7teVq4RIB27jB25WyP3JLX">
+  {% set cur = session.get('username') %}
+  <div class="layout" data-page-node-id="SMTmMphab4hJVS5MaeMxQ2">
+    <aside class="sidebar" data-page-node-id="N9vZDOosCnLBPG24nsaMXs">
+      <div class="brand" data-page-node-id="GhSLEwE6C76SBRsnJDssIZ"><a href="{{ url_for('index') }}" style="color:#fff; text-decoration:none" data-page-node-id="D6xEdGc6RBFDsBUJHSibmJ">🎓 学习工作台</a></div>
+      <nav class="menu" data-page-node-id="MjtYHxXxpH29SxIm55qerH">
+        {% if cur %}
+        <a href="{{ url_for('index') }}" class="menu-item {% if request.endpoint == 'index' %}active{% endif %}" data-page-node-id="J3zcVTIXoPVLaSjgg7zfaq">🏠 学习流程</a>
+        {% endif %}
+        <a href="{{ url_for('roadmap') }}" class="menu-item {% if request.endpoint == 'roadmap' %}active{% endif %}" data-page-node-id="qi6ytoSgd31poUfQFMlLPu">🗺️ 学习路线</a>
+        <a href="{{ url_for('method') }}" class="menu-item {% if request.endpoint == 'method' %}active{% endif %}" data-page-node-id="j11wZyTTFoPEHlSmotafUd">🎯 学习方法</a>
+        <a href="{{ url_for('map_page') }}" class="menu-item {% if request.endpoint == 'map_page' %}active{% endif %}" data-page-node-id="roBDun5DLm9PscW1niE47O">🧩 学习地图</a>
+        <a href="{{ url_for('search') }}" class="menu-item {% if request.endpoint == 'search' %}active{% endif %}" data-page-node-id="h1NayBYSUlkGLSCA7GWyU0">🔍 搜索</a>
+        <a href="{{ url_for('ask') }}" class="menu-item {% if request.endpoint == 'ask' %}active{% endif %}" data-page-node-id="ZlTIlGVDdOHFZHbI5X3oJ5">💬 问 AI</a>
+        <a href="{{ url_for('practice') }}" class="menu-item {% if request.endpoint == 'practice' %}active{% endif %}" data-page-node-id="LnNthQdemgl9azbtLpiaIb">✏️ 练习</a>
+        <a href="{{ url_for('extend') }}" class="menu-item {% if request.endpoint == 'extend' %}active{% endif %}" data-page-node-id="2dh9fsV1hT2LKa0wybQ7PC">🧭 拓展</a>
+        <a href="{{ url_for('resources') }}" class="menu-item {% if request.endpoint == 'resources' %}active{% endif %}" data-page-node-id="htClzv8gfjNl7DxnaV3WRz">📚 找资源</a>
+        {% if cur %}
+        <a href="{{ url_for('achievements') }}" class="menu-item {% if request.endpoint == 'achievements' %}active{% endif %}" data-page-node-id="z4zs9NHTLZyQ6JrWuI6I2H">🏆 成就</a>
+        <a href="{{ url_for('notes_list') }}" class="menu-item {% if request.endpoint in ['notes_list', 'note_view', 'note_edit', 'note_new', 'notes_upload', 'notes_import'] %}active{% endif %}" data-page-node-id="Xzp2ShheJtZ5ayCVCpg8qE">📝 笔记</a>
+        <a href="{{ url_for('tasks') }}" class="menu-item {% if request.endpoint == 'tasks' %}active{% endif %}" data-page-node-id="gO2kqsRjTGxkTYqjtjtNED">📋 任务</a>
+        <a href="{{ url_for('activity') }}" class="menu-item {% if request.endpoint == 'activity' %}active{% endif %}" data-page-node-id="ldwvfDEQAFRsOqYvYH3nPc">📜 记录</a>
+        {% endif %}
+      </nav>
+      <div class="sidebar-foot" data-page-node-id="YChmO8V7kXArOfr6CIxbpC">
+        {% if cur %}
+        <div style="margin-bottom:8px" data-page-node-id="osrOKet17psMHYyaG0XHBg">👤 {{ cur }}</div>
+        <a href="{{ url_for('logout') }}" style="color:#7d8f88; text-decoration:none" data-page-node-id="KXcYNvJEqvfwxRCmfU3qOo">↩ 登出</a>
+        {% else %}
+        <div style="margin-bottom:8px; color:#9fb3ab" data-page-node-id="4ZGHgiUgWgWPSn4ED4jEKz">👤 游客</div>
+        <div style="display:flex; gap:8px" data-page-node-id="BKQv8uNkD4uHiy0ogoHguw">
+          <a href="{{ url_for('login') }}" style="color:#fff; background:var(--accent); text-decoration:none; padding:6px 12px; border-radius:8px; font-size:13px" data-page-node-id="A8wGoRbFHbHx4jSNAg32kS">登录</a>
+          <a href="{{ url_for('register') }}" style="color:#bfccc7; border:1px solid #45695d; text-decoration:none; padding:6px 12px; border-radius:8px; font-size:13px" data-page-node-id="ejll9vsTuJMWzGyFt3GCpN">注册</a>
+        </div>
+        {% endif %}
+      </div>
+    </aside>
+    <main class="content" data-page-node-id="6AhymQPGNtMzIOdPcdzdkS">
+      <div class="content-inner" data-page-node-id="r885cLIbA5ekLgql0mEWqE">
+        {% block content %}{% endblock %}
+      </div>
+    </main>
+  </div>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

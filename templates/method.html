@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+{% block title %}学习方法{% endblock %}
+{% block content %}
+<h1>学习方法</h1>
+<p class="sub">选一个学科，给你一套该学科专属的高效学习方法 + 学习路径 + 后续建议</p>
+
+<div style="margin-bottom:10px">
+  <span style="color:var(--muted); font-size:14px">学科：</span>
+  {% for s in ["数学", "英语", "编程", "物理", "化学", "政治", "历史", "语文"] %}
+  <button class="chip subject-chip" data-subject="{{ s }}">{{ s }}</button>
+  {% endfor %}
+</div>
+<input type="text" id="method-subject" placeholder="或输入其它学科，例如：高数 / 机器学习 / 日语" style="margin-bottom:16px">
+
+<div style="margin-bottom:14px">
+  <span style="color:var(--muted); font-size:14px">当前水平：</span>
+  <button class="chip level-chip" data-level="入门">入门</button>
+  <button class="chip level-chip active" data-level="基础">基础</button>
+  <button class="chip level-chip" data-level="进阶">进阶</button>
+</div>
+
+<div style="margin-bottom:18px">
+  <span style="color:var(--muted); font-size:14px">学习目标：</span>
+  <button class="chip goal-chip" data-goal="应试">应试</button>
+  <button class="chip goal-chip" data-goal="兴趣">兴趣</button>
+  <button class="chip goal-chip" data-goal="实用">实用</button>
+  <button class="chip goal-chip active" data-goal="综合">综合</button>
+</div>
+
+<button class="btn" id="method-btn">🎯 生成学习方法</button>
+
+<div id="method-result" class="markdown" style="display:none; margin-top:20px"></div>
+<div id="method-save" style="display:none; margin-top:12px"></div>
+{% endblock %}

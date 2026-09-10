@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}学习路线{% endblock %}
+{% block content %}
+<h1>学习路线</h1>
+<p class="sub">想学哪个方向？AI 帮你找课程、排路径、做规划</p>
+
+<div style="margin-bottom:16px">
+  {% for d in ["机器学习", "深度学习", "计算机视觉", "自然语言处理", "强化学习", "数据科学", "Python 编程", "数学基础"] %}
+  <button class="chip" data-direction="{{ d }}">{{ d }}</button>
+  {% endfor %}
+</div>
+
+<form id="roadmap-form" class="searchbox">
+  <input type="text" id="direction" value="{{ request.args.get('d', '') }}" placeholder="输入你想学的方向，例如：机器学习 / 深度学习 / 计算机视觉…">
+  <button class="btn" type="submit">生成路线</button>
+</form>
+
+<div id="roadmap-result" class="markdown" style="display:none; margin-top:20px"></div>
+<div id="roadmap-save" style="display:none; margin-top:12px"></div>
+{% endblock %}

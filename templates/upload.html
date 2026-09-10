@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}上传笔记{% endblock %}
+{% block content %}
+<h1>上传笔记</h1>
+<p class="sub">把 PDF / Word / 电子书 / 文本文件传进来，自动变成笔记</p>
+
+{% if error %}<div class="notice">{{ error }}</div>{% endif %}
+
+<form method="post" enctype="multipart/form-data">
+  <input type="file" name="file" accept=".pdf,.docx,.epub,.txt,.md" style="margin-bottom:16px">
+  <div><button class="btn" type="submit">上传</button></div>
+</form>
+
+<p style="color:var(--muted); font-size:13px; margin-top:16px">
+  💡 整本书建议用「丢书检索」，能自动提炼成知识卡片；「上传笔记」适合单篇资料、讲义、自己写的笔记。
+</p>
+{% endblock %}

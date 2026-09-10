@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}学习流程{% endblock %}
+{% block content %}
+<h1>今天学什么？</h1>
+<p class="sub">输入一个知识点，跟着这个循环走</p>
+
+<div class="searchbox">
+  <input type="text" id="home-topic" placeholder="例如：高数-极限 / 线性代数-矩阵 / 微积分-导数">
+</div>
+
+<div class="grid" style="margin-top:20px">
+  <div class="card">
+    <div class="num">① 兴趣入门</div>
+    <h3>先找有趣的演示</h3>
+    <p>动画、可视化、短视频，建立直观感觉。</p>
+    <button class="btn ghost" id="go-demo" style="margin-top:14px">🔍 搜演示</button>
+    <div style="margin-top:8px; display:flex; gap:8px">
+      <button class="btn ghost" id="go-douyin" style="flex:1">🎵 抖音</button>
+      <button class="btn ghost" id="go-xhs" style="flex:1">📕 小红书</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="num">② 系统学习</div>
+    <h3>看课程长视频</h3>
+    <p>各类课程、系统教材，把概念真正学扎实。</p>
+    <button class="btn ghost" id="go-roadmap" style="margin-top:14px">🗺️ 生成学习路线</button>
+    <button class="btn ghost" id="go-video" style="margin-top:8px">🎬 B站找视频</button>
+  </div>
+
+  <div class="card">
+    <div class="num">③ 实践写题</div>
+    <h3>做题检验</h3>
+    <p>写题练习，看自己到底懂没懂。</p>
+    <button class="btn" id="go-practice" style="margin-top:14px">✏️ 去练习</button>
+  </div>
+
+  <div class="card">
+    <div class="num">④ 拓展</div>
+    <h3>学更深、学更广、联系实际</h3>
+    <p>AI 帮你延展：进阶方向、相关领域、真实应用。</p>
+    <button class="btn" id="go-extend" style="margin-top:14px">🧭 生成拓展方向</button>
+  </div>
+
+  <div class="card">
+    <div class="num">⑤ 连成地图</div>
+    <h3>把学到的东西画成图谱</h3>
+    <p>输入方向生成知识地图，看清"先学什么、再学什么"；登录后还能用笔记生成专属学习地图。</p>
+    <button class="btn ghost" id="go-map" style="margin-top:14px">🧩 打开学习地图</button>
+  </div>
+</div>
+
+<p style="margin-top:26px; color:var(--muted); font-size:14px; text-align:center">
+  ↻ 学完一轮 → 把搞懂的写进「笔记」归档 → 回到 ① 学下一个知识点
+</p>
+{% endblock %}

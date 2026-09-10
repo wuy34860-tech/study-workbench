@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{% if mode == 'new' %}新建笔记{% else %}编辑笔记{% endif %}{% endblock %}
+{% block content %}
+<h1>{% if mode == 'new' %}新建笔记{% else %}编辑笔记{% endif %}</h1>
+<p class="sub">正文支持 Markdown：# 标题、**加粗**、- 列表、```代码```</p>
+<form method="post">
+  <label>标题</label>
+  <input type="text" name="title" value="{{ title }}" placeholder="笔记标题">
+  <label style="display:block; margin-top:16px">正文</label>
+  <textarea name="body" rows="14" placeholder="用自己的话写……">{{ body }}</textarea>
+  <div style="margin-top:16px">
+    <button class="btn" type="submit">保存</button>
+    <a class="btn ghost" href="{% if mode == 'edit' %}{{ url_for('note_view', filename=filename) }}{% else %}{{ url_for('notes_list') }}{% endif %}">取消</a>
+  </div>
+</form>
+{% endblock %}

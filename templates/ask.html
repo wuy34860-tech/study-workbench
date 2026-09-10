@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}问 AI{% endblock %}
+{% block content %}
+<h1>问 AI</h1>
+<p class="sub">解释概念、查报错、理思路——用费曼法当你的听众</p>
+
+<div class="ask-panel">
+  <form id="ask-form">
+    <textarea id="ask-input" rows="6" placeholder="例如：什么是梯度下降？用类比解释一下。&#10;或者直接贴一段报错信息。"></textarea>
+    <div style="margin-top:12px"><button class="btn" type="submit">提问</button></div>
+  </form>
+  <div id="answer" class="answer-box" style="display:none"></div>
+</div>
+
+<div style="margin-top:24px; color:var(--muted); font-size:14px">
+  💡 建议用法：先自己尝试讲一遍，再让 AI 指出你没讲清的地方（对应学习流程第三步「讲懂」）。
+</div>
+{% endblock %}

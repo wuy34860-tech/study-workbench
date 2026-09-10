@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}找资源{% endblock %}
+{% block content %}
+<h1>找资源</h1>
+<p class="sub">输入方向，帮你找：论文 + 核心资料 + 重要网址 + 社区</p>
+
+<form class="searchbox" onsubmit="return false">
+  <input type="text" id="res-topic" value="{{ topic }}" placeholder="输入方向，例如：机器学习 / 深度学习 / 高数-极限">
+  <button class="btn" type="button" id="res-btn">📚 找资源</button>
+</form>
+
+<div id="res-papers" style="margin-top:20px"></div>
+<div id="res-html" class="markdown" style="display:none; margin-top:20px"></div>
+{% endblock %}

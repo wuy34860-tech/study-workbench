@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}拓展{% endblock %}
+{% block content %}
+<h1>拓展</h1>
+<p class="sub">学完一个知识点后，让 AI 帮你往更深、更广、更实际的方向延展</p>
+
+<form class="searchbox" onsubmit="return false">
+  <input type="text" id="extend-topic" value="{{ topic }}" placeholder="输入已学的知识点，例如：高数-极限">
+  <button class="btn" type="button" id="extend-gen-btn">🧭 生成拓展方向</button>
+</form>
+
+<div id="extend-result" class="markdown" style="display:none; margin-top:20px"></div>
+<div id="extend-save" style="display:none; margin-top:12px"></div>
+{% endblock %}

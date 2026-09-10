@@ -1,0 +1,9 @@
+flask
+markdown
+anthropic
+openai
+ddgs
+pypdf
+python-docx
+pillow
+google-generativeai

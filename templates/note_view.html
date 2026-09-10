@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}{{ title }}{% endblock %}
+{% block content %}
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px">
+  <a href="{{ url_for('notes_list') }}">← 返回笔记</a>
+  <div style="display:flex; gap:8px; align-items:center">
+    <button class="btn ghost" id="to-wiki-btn" data-filename="{{ filename }}">📤 存到 LLM Wiki</button>
+    <a class="btn ghost" href="{{ url_for('note_edit', filename=filename) }}">编辑</a>
+  </div>
+</div>
+<div class="markdown">
+  {{ html | safe }}
+</div>
+{% endblock %}

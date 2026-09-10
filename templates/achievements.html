@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}成就{% endblock %}
+{% block content %}
+<h1>成就 & 里程碑</h1>
+<p class="sub">定期梳理知识、确认掌握情况、解锁成就勋章</p>
+
+<div class="grid" style="margin-bottom:24px">
+  <div class="card"><div class="num">📝 笔记</div><h3>{{ stats.notes }} 篇</h3></div>
+  <div class="card"><div class="num">🧠 已掌握</div><h3>{{ stats.mastered }} 个</h3></div>
+  <div class="card"><div class="num">🏅 成就</div><h3>{{ unlocked_count }} / {{ badges|length }}</h3></div>
+  <div class="card"><div class="num">🎯 里程碑</div><h3>{{ reached }} 个</h3></div>
+</div>
+
+<div style="display:flex; gap:10px; margin-bottom:24px; flex-wrap:wrap">
+  <button class="btn" id="review-btn">🧹 一键梳理知识</button>
+  <button class="btn ghost" id="share-btn">📤 分享成就</button>
+</div>
+<div id="review-result" class="markdown" style="display:none; margin-bottom:24px"></div>
+<div id="share-result" class="answer-box" style="display:none; margin-bottom:24px"></div>
+
+<h2>🏅 成就勋章</h2>
+<div class="grid" style="margin-bottom:28px">
+  {% for b in badges %}
+  <div class="card" style="{% if not b.unlocked %}opacity:0.35{% endif %}">
+    <div class="num">{{ b.icon }} {{ b.name }}</div>
+    <p>{{ b.desc }}</p>
+    <p style="font-size:12px; margin:0; color:{% if b.unlocked %}var(--accent){% else %}var(--muted){% endif %}">
+      {% if b.unlocked %}✓ 已解锁{% else %}未解锁{% endif %}
+    </p>
+  </div>
+  {% endfor %}
+</div>
+
+<h2>🎯 学习里程碑</h2>
+<p class="sub" style="margin-bottom:14px">每掌握一个知识点，就离下一个里程碑更近一步</p>
+<div class="card" style="margin-bottom:28px">
+  <p>已掌握 <strong>{{ stats.mastered }}</strong> 个知识点{% if next_milestone %}，下一个里程碑：<strong>{{ next_milestone }}</strong> 个{% endif %}</p>
+  <div style="background:#e6e3dc; height:14px; border-radius:999px; overflow:hidden">
+    <div style="background:var(--accent); height:100%; width:{{ progress_pct }}%"></div>
+  </div>
+</div>
+
+<h2>🧠 知识掌握情况</h2>
+<p class="sub">点击右侧状态可切换：未掌握 → 学习中 → 已掌握</p>
+{% if notes %}
+<ul class="notes-list">
+  {% for n in notes %}
+  <li class="note-item">
+    <a href="{{ url_for('note_view', filename=n.filename) }}">{{ n.title }}</a>
+    <span class="tag mastery" data-filename="{{ n.filename }}" data-level="{{ n.level }}" title="点击切换掌握状态" style="cursor:pointer; margin-left:8px; background:{% if n.level == 3 %}var(--accent-soft); color:var(--accent){% elif n.level == 2 %}#fff3e0; color:#b26a00{% else %}#f0f0f0; color:#888{% endif %}">{{ n.level_label }}</span>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p style="color:var(--muted)">还没有笔记。</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}使用记录{% endblock %}
+{% block content %}
+<h1>使用记录</h1>
+<p class="sub">后台自动保存你的使用情况，可查看、删除、定期清理</p>
+
+<div class="card" style="margin-bottom:24px">
+  <h3 style="margin-top:0">⚙️ 设置</h3>
+
+  <label style="font-weight:600">AI 接入（这是关键，所有 AI 功能都靠它）</label>
+
+  <div style="display:flex; gap:10px; align-items:center; margin:6px 0 4px">
+    <select id="provider" style="flex:1; padding:8px 12px; border:1px solid var(--border); border-radius:8px">
+      <option value="anthropic" {% if settings.provider == 'anthropic' %}selected{% endif %}>Anthropic Claude（官方）</option>
+      <option value="openai_compat" {% if settings.provider == 'openai_compat' %}selected{% endif %}>OpenAI 兼容协议（Qwen / DeepSeek / 硅基流动 / GPT 等）</option>
+      <option value="gemini" {% if settings.provider == 'gemini' %}selected{% endif %}>Google Gemini</option>
+      <option value="demo" {% if settings.provider == 'demo' %}selected{% endif %}>内置示例 demo（无需 Key，纯演示）</option>
+    </select>
+    <button class="btn ghost" id="preset-btn" type="button">📋 一键填入预设</button>
+  </div>
+
+  <div id="preset-menu" style="display:none; background:var(--bg-2); border:1px solid var(--border); border-radius:8px; padding:8px; margin:0 0 12px; max-height:240px; overflow:auto"></div>
+
+  <label style="font-weight:600; display:block; margin-top:6px">模型名</label>
+  <input id="model" placeholder="例如：claude-3-5-sonnet-latest / qwen-plus / deepseek-chat / gpt-4o-mini"
+         style="margin-bottom:8px" value="{{ settings.model }}">
+
+  <label style="font-weight:600; display:block">Base URL（仅 OpenAI 兼容协议需要；用预设时自动填）</label>
+  <input id="base_url" placeholder="例如：https://dashscope.aliyuncs.com/compatible-mode/v1"
+         style="margin-bottom:8px" value="{{ settings.base_url }}">
+
+  <label style="font-weight:600; display:block">API 密钥</label>
+  <input type="password" id="api-key" placeholder="你模型服务的密钥" style="margin-bottom:4px" value="{{ settings.api_key }}">
+  <p style="color:var(--muted); font-size:12px; margin:0 0 14px">
+    存你自己的 key，AI 功能（问AI、路线、出题、拓展等）都会用它。<br>
+    Anthropic: <code>sk-ant-...</code>　·　Qwen/Dashscope: <code>sk-...</code>　·　DeepSeek: <code>sk-...</code>　·　OpenAI: <code>sk-...</code><br>
+    也可以用环境变量：<code>ANTHROPIC_API_KEY</code> / <code>OPENAI_API_KEY</code> / <code>DASHSCOPE_API_KEY</code> / <code>DEEPSEEK_API_KEY</code> / <code>SILICONFLOW_API_KEY</code> / <code>GEMINI_API_KEY</code>
+  </p>
+  <div style="display:flex; gap:10px; margin:10px 0 14px; flex-wrap:wrap">
+    <button class="btn ghost" id="save-llm-btn" type="button">保存 AI 接入</button>
+    <button class="btn ghost" id="test-llm-btn" type="button">🧪 测试连接</button>
+    <span id="test-result" style="align-self:center; font-size:13px"></span>
+  </div>
+
+  <hr style="border:none; border-top:1px dashed var(--border); margin:18px 0">
+
+  <label style="font-weight:600">LLM Wiki 目录（搜索/互通功能用）</label>
+  <input id="wiki_dir" placeholder="例如：E:\\llm wiki"
+         style="margin-bottom:4px" value="{{ settings.wiki_dir }}">
+  <p style="color:var(--muted); font-size:12px; margin:0 0 14px">
+    你的 LLM Wiki 笔记目录。留空用默认 <code>{{ settings.wiki_dir }}</code>。目录里所有 <code>.md</code> 文件都会被搜索/互通。
+  </p>
+  <button class="btn ghost" id="save-wiki-btn" type="button">保存 Wiki 路径</button>
+
+  <hr style="border:none; border-top:1px dashed var(--border); margin:18px 0">
+
+  <div style="margin-bottom:14px">
+    <label style="display:flex; align-items:center; gap:6px; cursor:pointer; font-weight:normal">
+      <input type="checkbox" id="record-toggle" {% if settings.record_enabled %}checked{% endif %}> 保存使用记录
+    </label>
+  </div>
+  <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:center">
+    <span style="color:var(--muted); font-size:14px">定期清理缓存：</span>
+    <select id="cleanup-period" style="padding:8px 12px; border:1px solid var(--border); border-radius:8px; font-size:14px">
+      <option value="off" {% if settings.cleanup_period == 'off' %}selected{% endif %}>关闭</option>
+      <option value="daily" {% if settings.cleanup_period == 'daily' %}selected{% endif %}>每天</option>
+      <option value="weekly" {% if settings.cleanup_period == 'weekly' %}selected{% endif %}>每周</option>
+    </select>
+    <button class="btn ghost" id="cleanup-btn">🧹 立即清理缓存</button>
+  </div>
+  <p style="color:var(--muted); font-size:12px; margin:12px 0 0">缓存指上传文件产生的临时文件、已完成的旧任务记录；不会动你的笔记。</p>
+</div>
+
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px">
+  <h2 style="margin:0">📜 记录列表</h2>
+  <button class="btn ghost" id="clear-btn">清空所有记录</button>
+</div>
+<div id="activity-list"></div>
+{% endblock %}

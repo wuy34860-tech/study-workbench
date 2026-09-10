@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}练习{% endblock %}
+{% block content %}
+<h1>实践写题</h1>
+<p class="sub">输入知识点，AI 出题或帮你找题，做完让 AI 批改</p>
+
+<form class="searchbox" onsubmit="return false">
+  <input type="text" id="topic" value="{{ topic }}" placeholder="输入知识点，例如：高数-极限 / 线性代数-矩阵 / 微积分-导数">
+  <button class="btn" type="button" id="gen-btn">🤖 AI 出题</button>
+  <button class="btn ghost" type="button" id="find-btn">🔍 找题</button>
+</form>
+
+<div style="margin-top:14px">
+  <span style="color:var(--muted); font-size:14px">难度：</span>
+  <button class="chip" data-diff="入门">入门</button>
+  <button class="chip" data-diff="基础">基础</button>
+  <button class="chip active" data-diff="进阶">进阶</button>
+</div>
+
+<div id="practice-result" class="markdown" style="display:none; margin-top:20px"></div>
+<div id="find-result" style="display:none; margin-top:20px"></div>
+
+<div id="check-panel" style="display:none; margin-top:28px">
+  <h3>对答案</h3>
+  <p class="sub" style="margin-bottom:10px">做完题后，把你的答案贴在这里，让 AI 批改讲解</p>
+  <textarea id="my-answer" rows="6" placeholder="把每题你的答案写在这里……"></textarea>
+  <div style="margin-top:10px"><button class="btn" id="check-btn">让 AI 批改</button></div>
+  <div id="check-result" class="markdown" style="display:none; margin-top:16px"></div>
+</div>
+{% endblock %}

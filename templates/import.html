@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}丢书检索{% endblock %}
+{% block content %}
+<h1>丢书检索</h1>
+<p class="sub">把一本书（PDF / 电子书 / Word）丢进来，AI 读完自动提炼成知识卡片</p>
+
+{% if error %}<div class="notice">{{ error }}</div>{% endif %}
+
+<form method="post" enctype="multipart/form-data">
+  <input type="file" name="file" accept=".pdf,.docx,.epub" style="margin-bottom:16px">
+  <div><button class="btn" type="submit">开始提炼</button></div>
+</form>
+
+<p style="color:var(--muted); font-size:13px; margin-top:16px">
+  ⏳ 提炼需要一点时间（书越大越久，可能 1~2 分钟），提交后请耐心等待，不要刷新或关闭页面。
+</p>
+{% endblock %}
