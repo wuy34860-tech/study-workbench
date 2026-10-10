@@ -11,7 +11,7 @@
 </div>
 
 <form id="roadmap-form" class="searchbox">
-  <input type="text" id="direction" value="{{ request.args.get('d', '') }}" placeholder="输入你想学的方向，例如：机器学习 / 深度学习 / 计算机视觉…">
+  <input type="text" id="direction" data-draft="roadmap.direction" value="{{ request.args.get('d', '') }}" placeholder="输入你想学的方向，例如：机器学习 / 深度学习 / 计算机视觉…">
   <button class="btn" type="submit">生成路线</button>
 </form>
 

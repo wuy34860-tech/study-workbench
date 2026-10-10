@@ -21,6 +21,131 @@ async function guardSave(r) {
   return false;
 }
 
+// ===== 输入草稿：自动暂存 / 离开后回填 / 提交或清空后删除 =====
+// 存储策略：登录用户走服务端 per-user 草稿库（/api/draft），未登录或接口不可用自动降级到 localStorage
+// 键名规则：场景.条目（如 roadmap.direction / practice.answer），不同场景互不覆盖
+const DRAFT_LS_PREFIX = "study-draft:";
+let draftStore = null;          // 服务端草稿快照（登录后）
+const draftTimers = {};         // 防抖计时器
+let draftFields = [];           // 本页所有 [data-draft] 输入框
+
+function draftLSKey(key) {
+  return DRAFT_LS_PREFIX + key;
+}
+
+function readLocalDraft(key) {
+  try { return localStorage.getItem(draftLSKey(key)) || ""; } catch (e) { return ""; }
+}
+
+function writeLocalDraft(key, value) {
+  try {
+    if (value) localStorage.setItem(draftLSKey(key), value);
+    else localStorage.removeItem(draftLSKey(key));
+  } catch (e) {}
+}
+
+// 写入草稿：本地立即落盘（刷新/离线/未登录也能恢复），登录态再防抖同步服务端
+function saveDraft(key, value) {
+  writeLocalDraft(key, value);
+  if (draftStore === null) return;          // 未登录或接口不可用：只用本地
+  if (value) draftStore[key] = { value: value };
+  else delete draftStore[key];
+  clearTimeout(draftTimers[key]);
+  draftTimers[key] = setTimeout(() => {
+    fetch("/api/draft", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key: key, value: value }),
+    }).catch(() => {});
+  }, 400);
+}
+
+// 清除草稿：提交成功 / 用户手动清空或放弃
+function clearDraft(key) {
+  writeLocalDraft(key, "");
+  if (draftStore !== null) delete draftStore[key];
+  clearTimeout(draftTimers[key]);
+  if (draftStore === null) return;
+  fetch("/api/draft", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ key: key, value: "" }),
+  }).catch(() => {});
+}
+
+// 回填：只覆盖"空的或上次由草稿填入的"内容，不打断用户已输入/服务端预填的值
+function applyDraft(el, value) {
+  if (!value) return;
+  if (el.value !== "" && el.value !== el.__draftShown) return;
+  el.value = value;
+  el.__draftShown = value;
+  showDraftHint(el);
+}
+
+// 草稿提示条：告知用户内容已恢复，并提供"放弃草稿"入口
+function showDraftHint(el) {
+  if (el.__hintEl) { el.__hintEl.style.display = "flex"; return; }
+  const key = el.dataset.draft;
+  const hint = document.createElement("div");
+  hint.style.cssText = "display:flex; align-items:center; gap:8px; margin-top:6px; font-size:12px; color:var(--muted)";
+  hint.innerHTML = '<span>🗒️ 已恢复上次未提交的内容</span>' +
+    '<button type="button" class="btn ghost draft-discard" style="padding:2px 8px; font-size:12px">丢弃</button>';
+  el.parentNode.insertBefore(hint, el.nextSibling);
+  el.__hintEl = hint;
+  hint.querySelector(".draft-discard").addEventListener("click", () => {
+    clearDraft(key);
+    el.value = "";
+    el.__draftShown = "";
+    hint.style.display = "none";
+  });
+}
+
+// 初始化：先用本地缓存同步回填（无闪烁），再拉服务端草稿覆盖，最后绑定输入监听
+function initDrafts() {
+  draftFields = Array.from(document.querySelectorAll("[data-draft]"));
+  if (!draftFields.length) return;
+
+  draftFields.forEach((el) => {
+    el.__draftShown = "";
+    applyDraft(el, readLocalDraft(el.dataset.draft));
+  });
+
+  fetch("/api/drafts")
+    .then((r) => (r.ok ? r.json() : null))
+    .then((j) => {
+      if (j && j.ok) {
+        draftStore = j.drafts || {};
+        draftFields.forEach((el) => {
+          const d = draftStore[el.dataset.draft];
+          if (d && d.value) {
+            applyDraft(el, d.value);
+            writeLocalDraft(el.dataset.draft, d.value);   // 本地也同步一份，离线可恢复
+          }
+        });
+      } else {
+        draftStore = null;    // 未登录等：降级为纯本地草稿
+      }
+    })
+    .catch(() => { draftStore = null; });
+
+  draftFields.forEach((el) => {
+    const key = el.dataset.draft;
+    let timer = null;
+    el.addEventListener("input", () => {
+      const v = el.value;
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        if (v.trim()) saveDraft(key, v);
+        else clearDraft(key);        // 手动清空 = 放弃草稿，直接删除
+      }, 300);
+    });
+    // 回车提交的路径（非 form 的场景）也能顺带清掉对应草稿
+    el.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") { clearDraft(key); el.value = ""; if (el.__hintEl) el.__hintEl.style.display = "none"; }
+    });
+  });
+}
+
 // 提交任务 → 轮询状态 → 完成后回调（用户可随时离开，任务继续后台跑）
 async function submitAndPoll(url, body, onResult) {
   let submit;
@@ -62,6 +187,8 @@ async function submitAndPoll(url, body, onResult) {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
+  initDrafts();   // 最先执行：把未提交的内容回填进输入框
+
   // ===== 问 AI =====
   const askForm = document.getElementById("ask-form");
   if (askForm) {
@@ -74,6 +201,7 @@ document.addEventListener("DOMContentLoaded", () => {
       answerBox.style.display = "block";
       answerBox.textContent = "思考中…";
       const data = await postJSON("/api/ask", { question: q });
+      if (data.answer) clearDraft("ask.question");
       answerBox.textContent = data.answer || "（出错了）";
     });
   }
@@ -107,6 +235,7 @@ document.addEventListener("DOMContentLoaded", () => {
       await submitAndPoll("/api/roadmap", { direction: d }, (res) => {
         if (res.result && res.result.html) {
           lastRoadmap = res.result.roadmap;
+          clearDraft("roadmap.direction");       // 生成成功 → 清掉草稿
           resultBox.innerHTML = res.result.html;
           saveBox.style.display = "block";
           saveBox.innerHTML = '<button class="btn" id="save-roadmap">保存为笔记</button>';
@@ -220,10 +349,13 @@ document.addEventListener("DOMContentLoaded", () => {
       await submitAndPoll("/api/practice/generate", { topic, difficulty }, (res) => {
         if (res.result && res.result.html) {
           lastProblems = res.result.problems;
+          clearDraft("practice.topic");
+          clearDraft("practice.answer");
           resultBox.innerHTML = res.result.html;
           checkPanel.style.display = "block";
           checkResult.style.display = "none";
           myAnswer.value = "";
+          myAnswer.__draftShown = "";
         } else {
           resultBox.textContent = res.message || "（出题失败）";
         }
@@ -262,6 +394,10 @@ document.addEventListener("DOMContentLoaded", () => {
       checkResult.style.display = "block";
       checkResult.textContent = "正在批改…";
       await submitAndPoll("/api/practice/check", { topic, problems: lastProblems, answer: myAnswer.value }, (res) => {
+        if (res.result && res.result.html) {
+          clearDraft("practice.answer");         // 批改完成 → 答案草稿作废
+          myAnswer.__draftShown = "";
+        }
         checkResult.innerHTML = (res.result && res.result.html) || res.message || "（出错了）";
       });
     });
@@ -284,6 +420,7 @@ document.addEventListener("DOMContentLoaded", () => {
       await submitAndPoll("/api/extend", { topic }, (res) => {
         if (res.result && res.result.html) {
           lastExtend = res.result.extend;
+          clearDraft("extend.topic");
           resultBox.innerHTML = res.result.html;
           saveBox.style.display = "block";
           saveBox.innerHTML = '<button class="btn" id="save-extend">保存为笔记</button>';
@@ -313,6 +450,7 @@ document.addEventListener("DOMContentLoaded", () => {
       htmlBox.textContent = "正在后台找资源…（可先做别的，结果也会出现在「任务」页）";
       await submitAndPoll("/api/resources", { topic }, (res) => {
         if (res.result) {
+          clearDraft("resources.topic");
           if (res.result.papers_html) {
             papersBox.innerHTML = res.result.papers_html;
           }
@@ -385,6 +523,7 @@ document.addEventListener("DOMContentLoaded", () => {
       await submitAndPoll("/api/method", { subject, level, goal }, (res) => {
         if (res.result && res.result.html) {
           lastMethod = res.result.method;
+          clearDraft("method.subject");
           resultBox.innerHTML = res.result.html;
           saveBox.style.display = "block";
           saveBox.innerHTML = '<button class="btn" id="save-method">保存为笔记</button>';

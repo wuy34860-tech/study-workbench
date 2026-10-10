@@ -17,7 +17,7 @@
     {% endfor %}
   </div>
   <form id="map-form" class="searchbox">
-    <input type="text" id="map-topic" value="{{ request.args.get('d', '') }}" placeholder="输入想学的方向，例如：自然语言处理 / 机器学习…">
+    <input type="text" id="map-topic" data-draft="map.topic" value="{{ request.args.get('d', '') }}" placeholder="输入想学的方向，例如：自然语言处理 / 机器学习…">
     <button class="btn" type="submit">生成知识地图</button>
   </form>
 </div>
@@ -110,6 +110,7 @@
       var r = res.result;
       if (!r || !r.graph) { statusBox.style.display = "block"; statusBox.textContent = (r && r.message) || res.message || "（生成失败）"; return; }
       lastGraph = r.graph; lastText = r.text || ""; lastSource = r.source || "theme";
+      if (r.source !== "notes") clearDraft("map.topic");   // 出图成功 → 清掉草稿
       var g = lastGraph;
       document.getElementById("map-title").textContent = (r.source === "notes" ? "我的笔记图谱" : g.topic + " · 学习地图");
       var demoTag = document.getElementById("map-demo-tag");

@@ -672,6 +672,53 @@ def _srs_next(grade: int, card: dict) -> dict:
     return card
 
 
+# ---------- 输入草稿：自动暂存 / 回填 ----------
+
+DRAFT_MAXLEN = 20000
+
+
+def load_drafts(username=None) -> dict:
+    """草稿仓库：{ "场景.条目": {"value": 文本, "at": 时间} }"""
+    if user_file("drafts.json", username).exists():
+        try:
+            return json.loads(user_file("drafts.json", username).read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+    return {}
+
+
+def save_drafts(data: dict, username=None):
+    user_file("drafts.json", username).write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _draft_key(key: str) -> str:
+    """规范化草稿 key（只允许 场景.条目 形式），避免越权或脏 key。"""
+    key = re.sub(r"[^0-9A-Za-z_\-\u4e00-\u9fff.]", "_", str(key or ""))
+    return key[:120]
+
+
+def clear_draft(key: str, username=None) -> bool:
+    """提交成功 / 用户放弃后清除单条草稿。"""
+    key = _draft_key(key)
+    drafts = load_drafts(username)
+    if key in drafts:
+        drafts.pop(key)
+        save_drafts(drafts, username)
+        return True
+    return False
+
+
+def clear_draft_prefix(prefix: str, username=None) -> int:
+    """按场景批量清除（如保存笔记后清掉该笔记的标题/正文草稿）。"""
+    drafts = load_drafts(username)
+    hits = [k for k in drafts if k.startswith(prefix)]
+    for k in hits:
+        drafts.pop(k)
+    if hits:
+        save_drafts(drafts, username)
+    return len(hits)
+
+
 # ---------- 使用记录 / 设置 / 清理 ----------
 
 
@@ -1457,6 +1504,7 @@ def note_new():
         title = request.form.get("title", "").strip() or "未命名"
         body = request.form.get("body", "").strip()
         filename = create_note(title, body)
+        clear_draft_prefix("note.__new__.")          # 保存成功 → 清掉新建笔记的草稿
         log_activity("新建笔记", title)
         return redirect(url_for("note_view", filename=filename))
     return render_template("note_edit.html", mode="new", title="", body="")
@@ -1517,6 +1565,7 @@ def note_edit(filename):
         title = request.form.get("title", "").strip() or "未命名"
         body = request.form.get("body", "").strip()
         path.write_text(f"# {title}\n\n{body}\n", encoding="utf-8")
+        clear_draft_prefix(f"note.{filename}.")      # 保存成功 → 清掉该笔记的草稿
         return redirect(url_for("note_view", filename=filename))
     title, body = parse_note(path)
     return render_template("note_edit.html", mode="edit", filename=filename, title=title, body=body)
@@ -1800,6 +1849,31 @@ def api_srs_grade():
     log_activity("间隔复习", f"{SRS_GRADES[grade]} - {title}（下次 {card['due']}）")
     return jsonify({"ok": True, "next_due": card["due"], "interval": card["interval"],
                     "grade_label": SRS_GRADES[grade]})
+
+
+@app.route("/api/drafts")
+@api_required
+def api_drafts_get():
+    """拉取当前用户全部草稿（页面进入时用于回填）。"""
+    return jsonify({"ok": True, "drafts": load_drafts()})
+
+
+@app.route("/api/draft", methods=["POST"])
+@api_required
+def api_draft_save():
+    """暂存一条草稿；value 为空表示手动清空/放弃 → 直接删除，避免脏数据。"""
+    data = request.get_json(silent=True) or {}
+    key = _draft_key(data.get("key", ""))
+    value = str(data.get("value", ""))[:DRAFT_MAXLEN]
+    if not key:
+        return jsonify({"ok": False, "message": "缺少草稿标识"})
+    drafts = load_drafts()
+    if value.strip():
+        drafts[key] = {"value": value, "at": time.strftime("%Y-%m-%d %H:%M:%S")}
+    else:
+        drafts.pop(key, None)
+    save_drafts(drafts)
+    return jsonify({"ok": True, "key": key, "saved": bool(value.strip())})
 
 
 @app.route("/api/review", methods=["POST"])
