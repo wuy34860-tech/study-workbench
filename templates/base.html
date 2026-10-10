@@ -24,6 +24,7 @@
         <a href="{{ url_for('extend') }}" class="menu-item {% if request.endpoint == 'extend' %}active{% endif %}" data-page-node-id="2dh9fsV1hT2LKa0wybQ7PC">🧭 拓展</a>
         <a href="{{ url_for('resources') }}" class="menu-item {% if request.endpoint == 'resources' %}active{% endif %}" data-page-node-id="htClzv8gfjNl7DxnaV3WRz">📚 找资源</a>
         {% if cur %}
+        <a href="{{ url_for('review_page') }}" class="menu-item {% if request.endpoint == 'review_page' %}active{% endif %}">🗓️ 复习</a>
         <a href="{{ url_for('achievements') }}" class="menu-item {% if request.endpoint == 'achievements' %}active{% endif %}" data-page-node-id="z4zs9NHTLZyQ6JrWuI6I2H">🏆 成就</a>
         <a href="{{ url_for('notes_list') }}" class="menu-item {% if request.endpoint in ['notes_list', 'note_view', 'note_edit', 'note_new', 'notes_upload', 'notes_import'] %}active{% endif %}" data-page-node-id="Xzp2ShheJtZ5ayCVCpg8qE">📝 笔记</a>
         <a href="{{ url_for('tasks') }}" class="menu-item {% if request.endpoint == 'tasks' %}active{% endif %}" data-page-node-id="gO2kqsRjTGxkTYqjtjtNED">📋 任务</a>

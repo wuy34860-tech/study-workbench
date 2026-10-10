@@ -11,6 +11,7 @@
 """
 
 import json
+import datetime
 import os
 import re
 import threading
@@ -620,6 +621,55 @@ def load_mastery(username=None) -> dict:
 
 def save_mastery(data: dict, username=None):
     user_file("mastery.json", username).write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+# ---------- 间隔复习（SRS / SM-2 简化版） ----------
+
+SRS_GRADES = {0: "忘了", 1: "模糊", 2: "记住了", 3: "很简单"}
+
+
+def load_srs(username=None) -> dict:
+    if user_file("srs.json", username).exists():
+        try:
+            return json.loads(user_file("srs.json", username).read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+    return {}
+
+
+def save_srs(data: dict, username=None):
+    user_file("srs.json", username).write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def _srs_next(grade: int, card: dict) -> dict:
+    """SM-2 简化版：按自评档位计算下次复习日期。
+
+    grade: 0=忘了 1=模糊 2=记住了 3=很简单
+    """
+    ease = float(card.get("ease", 2.5))
+    interval = int(card.get("interval", 0))
+    reps = int(card.get("reps", 0))
+    if grade == 0:            # 忘了：重置，明天再来
+        reps, interval = 0, 1
+        ease = max(1.3, ease - 0.2)
+    elif grade == 1:          # 模糊：短期重见
+        interval = 1 if interval < 2 else 2
+        ease = max(1.3, ease - 0.1)
+    else:                     # 记住了 / 很简单：间隔按难度系数拉长
+        reps += 1
+        if reps == 1:
+            interval = 1
+        elif reps == 2:
+            interval = 3
+        else:
+            interval = max(3, round(interval * ease * (1.3 if grade == 3 else 1.0)))
+        if grade == 3:
+            ease = min(3.0, ease + 0.1)
+    today = datetime.date.today()
+    card.update({"ease": round(ease, 2), "interval": int(interval), "reps": int(reps),
+                 "last": today.isoformat(),
+                 "due": (today + datetime.timedelta(days=int(interval))).isoformat()})
+    return card
 
 
 # ---------- 使用记录 / 设置 / 清理 ----------
@@ -1285,6 +1335,33 @@ def map_page():
     return render_template("map.html")
 
 
+@app.route("/review")
+@login_required
+def review_page():
+    """间隔复习：以笔记为卡片，SM-2 调度，对抗遗忘曲线。"""
+    srs = load_srs()
+    mastery = load_mastery()
+    today = datetime.date.today().isoformat()
+    due, future = [], []
+    for p in note_files():
+        title, body = parse_note(p)
+        level = mastery.get(p.name, 1)
+        c = srs.get(p.name)
+        if c is None:
+            # 从未复习过：未掌握/学习中的笔记今天即可开始；已掌握的暂不入队
+            if level in (1, 2):
+                due.append({"filename": p.name, "title": title, "level": level,
+                            "level_label": MASTERY_LEVELS.get(level, "未掌握"),
+                            "due": today, "interval": 0, "new": True})
+            continue
+        card = {"filename": p.name, "title": title, "level": level,
+                "level_label": MASTERY_LEVELS.get(level, "未掌握"),
+                "due": c.get("due", today), "interval": c.get("interval", 0), "new": False}
+        (due if card["due"] <= today else future).append(card)
+    future.sort(key=lambda x: x["due"])
+    return render_template("review.html", due=due, future=future)
+
+
 @app.route("/achievements")
 @login_required
 def achievements():
@@ -1702,6 +1779,27 @@ def api_mastery():
     title, _ = parse_note(path)
     log_activity("掌握状态", f"{MASTERY_LEVELS.get(level, '未掌握')} - {title}")
     return jsonify({"ok": True, "label": MASTERY_LEVELS.get(level, "未掌握")})
+
+
+@app.route("/api/srs/grade", methods=["POST"])
+@api_required
+def api_srs_grade():
+    data = request.get_json(silent=True) or {}
+    filename = data.get("filename", "")
+    grade = data.get("grade", 2)
+    if grade not in (0, 1, 2, 3):
+        grade = 2
+    path = (note_dir() / filename).resolve()
+    if note_dir().resolve() not in path.parents or not path.is_file():
+        return jsonify({"ok": False, "message": "笔记不存在"})
+    srs = load_srs()
+    card = _srs_next(grade, srs.get(filename, {}))
+    srs[filename] = card
+    save_srs(srs)
+    title, _ = parse_note(path)
+    log_activity("间隔复习", f"{SRS_GRADES[grade]} - {title}（下次 {card['due']}）")
+    return jsonify({"ok": True, "next_due": card["due"], "interval": card["interval"],
+                    "grade_label": SRS_GRADES[grade]})
 
 
 @app.route("/api/review", methods=["POST"])

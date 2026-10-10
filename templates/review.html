@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% block title %}间隔复习{% endblock %}
+{% block content %}
+<h1>🗓️ 间隔复习</h1>
+<p class="sub">对抗遗忘曲线：「学习中 / 未掌握」的笔记自动进入队列 —— 先回忆，再核对，自评四档，智能排期</p>
+
+<div class="grid" style="margin-bottom:24px">
+  <div class="card"><div class="num">⏰ 今日到期</div><h3>{{ due|length }} 张</h3></div>
+  <div class="card"><div class="num">📅 已排期</div><h3>{{ future|length }} 张</h3></div>
+  <div class="card"><div class="num">📚 笔记总数</div><h3>{{ due|length + future|length }} 篇</h3></div>
+</div>
+
+{% if due %}
+<div id="review-area">
+  <div class="card" style="padding:28px">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px">
+      <span class="sub" id="progress" style="margin:0"></span>
+      <span class="tag" id="card-level"></span>
+    </div>
+    <h2 id="card-title" style="margin:10px 0 6px; font-size:22px"></h2>
+    <p class="sub" style="margin-bottom:18px">💡 先在心里回忆这篇笔记讲了什么，想不起来再打开核对 —— 这个"提取努力"正是记忆加固的机制</p>
+    <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center">
+      <a class="btn ghost" id="card-link" href="#" target="_blank">📖 打开笔记核对</a>
+      <span style="flex:1"></span>
+    </div>
+    <div style="margin-top:22px">
+      <p class="sub" style="margin-bottom:10px">核对后，诚实地告诉系统你记住了多少：</p>
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:10px">
+        <button class="btn ghost" data-grade="0" style="border-color:#d88; color:#a44">😵 忘了<br><small>明天重来</small></button>
+        <button class="btn ghost" data-grade="1" style="border-color:#da8; color:#963">🤔 模糊<br><small>1~2 天后</small></button>
+        <button class="btn" data-grade="2">🙂 记住了<br><small>间隔翻倍</small></button>
+        <button class="btn ghost" data-grade="3" style="border-color:#8c8; color:#283">😎 很简单<br><small>间隔拉长</small></button>
+      </div>
+    </div>
+  </div>
+  <p id="grade-feedback" style="text-align:center; color:var(--accent); margin-top:12px; display:none"></p>
+</div>
+{% else %}
+<div class="card" style="padding:36px; text-align:center">
+  <div style="font-size:48px">🎉</div>
+  <h3>今日复习清零！</h3>
+  <p class="sub">今天的记忆巩固完成。去「🧩 学习地图」挑下一个要变绿的节点，或到「✏️ 练习」检验新学的知识。</p>
+</div>
+{% endif %}
+
+{% if future %}
+<h2 style="margin-top:8px">📅 未来排期</h2>
+<p class="sub">已按 SM-2 算法安排好下次复习时间</p>
+<div class="card" style="padding:0; overflow:hidden">
+  <ul class="notes-list" style="margin:0">
+    {% for c in future %}
+    <li class="note-item" style="display:flex; justify-content:space-between; align-items:center; padding:10px 16px">
+      <a href="{{ url_for('note_view', filename=c.filename) }}">{{ c.title }}</a>
+      <span style="color:var(--muted); font-size:13px; white-space:nowrap">
+        {% if c.new %}<span class="tag">新卡片</span>{% endif %}
+        {{ c.due }}{% if c.interval %} · 每 {{ c.interval }} 天{% endif %}
+      </span>
+    </li>
+    {% endfor %}
+  </ul>
+</div>
+{% endif %}
+
+{% if not due and not future %}
+<div class="notice" style="margin-top:14px">
+  还没有可复习的卡片。在「📝 笔记」里把知识点的掌握度标为 <b>未掌握 / 学习中</b>，它们就会自动进入复习队列；复习通过、批改过关后再标 <b>已掌握</b>。
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{% if due %}
+<script>
+(function () {
+  var cards = {{ due | tojson }};
+  var i = 0;
+  var titleEl = document.getElementById("card-title");
+  var linkEl = document.getElementById("card-link");
+  var levelEl = document.getElementById("card-level");
+  var progressEl = document.getElementById("progress");
+  var feedback = document.getElementById("grade-feedback");
+
+  function show() {
+    var c = cards[i];
+    titleEl.textContent = c.title;
+    linkEl.href = "/notes/" + encodeURIComponent(c.filename);
+    levelEl.textContent = c.level_label + (c.new ? " · 新卡片" : "");
+    progressEl.textContent = "第 " + (i + 1) + " / " + cards.length + " 张";
+    feedback.style.display = "none";
+  }
+
+  document.querySelectorAll("[data-grade]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var grade = parseInt(btn.getAttribute("data-grade"), 10);
+      var c = cards[i];
+      btn.disabled = true;
+      fetch("/api/srs/grade", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename: c.filename, grade: grade })
+      }).then(function (r) { return r.json(); }).then(function (d) {
+        btn.disabled = false;
+        if (!d.ok) { alert(d.message || "提交失败，请重试"); return; }
+        feedback.textContent = "✓ 已记录：「" + d.grade_label + "」· 下次复习：" + d.next_due +
+                               (d.interval >= 3 ? "（每 " + d.interval + " 天一轮）" : "");
+        feedback.style.display = "block";
+        i += 1;
+        if (i < cards.length) {
+          setTimeout(show, 700);
+        } else {
+          setTimeout(function () { window.location.reload(); }, 900);
+        }
+      }).catch(function () {
+        btn.disabled = false;
+        alert("网络错误，请重试");
+      });
+    });
+  });
+
+  show();
+})();
+</script>
+{% endif %}
+{% endblock %}
